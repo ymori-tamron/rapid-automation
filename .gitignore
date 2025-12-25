@@ -18,3 +18,5 @@ Thumbs.db
 # CAD output & Data
 *.zrd  # 図脳RAPIDの拡張子（必要に応じて）
 data/
+
+docs/scratch
