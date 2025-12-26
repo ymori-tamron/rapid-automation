@@ -300,8 +300,130 @@ def test_calculate_sag_boolean_not_accepted_as_number() -> None:
 # GlassWeight関数テスト
 # =============================================================================
 
+# VBA計算値との比較テスト
+# 注: expected_weight の値はVBAマクロ (basUDF.GlassWeight) で計算した値を入力してください
 
-def _reference_glass_weight(
+
+@pytest.mark.parametrize(
+    "radius1,radius2,thickness,specific_gravity,diameter1,diameter2,max_diameter,"
+    "coefficients1,coefficients2,expected_weight,test_id",
+    [
+        # 球面レンズ（両面球面）
+        (
+            50.0,
+            -50.0,
+            5.0,
+            2.5,
+            40.0,
+            40.0,
+            40.0,
+            None,
+            None,
+            2.78456744399565,
+            "spherical_both",
+        ),
+        # 非球面レンズ（R1面のみ非球面）
+        (
+            50.0,
+            -50.0,
+            5.0,
+            2.5,
+            40.0,
+            40.0,
+            40.0,
+            AsphericCoefficients(conic=-0.5, a4=1e-6),
+            None,
+            2.70910802866498,
+            "aspheric_r1_only",
+        ),
+        # 非球面レンズ（両面非球面）
+        (
+            50.0,
+            -60.0,
+            6.0,
+            2.6,
+            45.0,
+            45.0,
+            45.0,
+            AsphericCoefficients(conic=-0.5, a4=1e-6),
+            AsphericCoefficients(conic=-0.8, a4=-2e-6),
+            4.33624166550092,
+            "aspheric_both",
+        ),
+        # 平面+球面レンズ
+        (
+            None,
+            -80.0,
+            4.0,
+            2.5,
+            35.0,
+            35.0,
+            35.0,
+            None,
+            None,
+            7.30049943952618,
+            "plane_and_sphere",
+        ),
+        # 平行平板（両面平面）
+        (
+            None,
+            None,
+            5.0,
+            2.5,
+            40.0,
+            40.0,
+            40.0,
+            None,
+            None,
+            15.707963267949,
+            "flat_plate",
+        ),
+        # エッジケース: 比重が極小
+        (
+            None,
+            None,
+            4.0,
+            0.01,
+            30.0,
+            30.0,
+            30.0,
+            None,
+            None,
+            0.0282743338823081,
+            "edge_specific_gravity_min",
+        ),
+        # エッジケース: 比重が極大
+        (
+            None,
+            None,
+            4.0,
+            20.0,
+            30.0,
+            30.0,
+            30.0,
+            None,
+            None,
+            56.5486677646163,
+            "edge_specific_gravity_max",
+        ),
+        # エッジケース: 厚みが極小
+        (
+            None,
+            None,
+            0.1,
+            2.5,
+            40.0,
+            40.0,
+            40.0,
+            None,
+            None,
+            0.314159265358979,
+            "edge_thickness_min",
+        ),
+    ],
+    ids=lambda params: params[-1] if isinstance(params, tuple) else None,
+)
+def test_calculate_glass_weight_matches_vba(
     radius1: float | None,
     radius2: float | None,
     thickness: float,
@@ -309,164 +431,29 @@ def _reference_glass_weight(
     diameter1: float,
     diameter2: float,
     max_diameter: float,
-    coefficients1: AsphericCoefficients | None = None,
-    coefficients2: AsphericCoefficients | None = None,
-    steps: int = 2000,
-) -> float | None:
-    """GlassWeightの参照値を高分割数で計算する。"""
-    if coefficients1 is None:
-        coefficients1 = AsphericCoefficients()
-    if coefficients2 is None:
-        coefficients2 = AsphericCoefficients()
-
-    dh1 = (diameter1 / 2.0) / steps
-    dh2 = (diameter2 / 2.0) / steps
-    pi = math.pi
-
-    def calculate_volume(
-        radius: float | None,
-        coefficients: AsphericCoefficients,
-        dh: float,
-        sign: float,
-    ) -> float | None:
-        volume = 0.0
-        z_prev = 0.0
-        for i in range(steps + 1):
-            diameter = (dh * i) * 2.0
-            sag = calculate_sag(radius, diameter, coefficients)
-            if sag is None:
-                return None
-            z = sign * sag
-            if i > 0:
-                volume -= (
-                    ((dh * steps) ** 2) * 2.0 - (dh * (i - 1)) ** 2 - (dh * i) ** 2
-                ) * pi * (z - z_prev) / 2.0
-            z_prev = z
-
-        volume -= (((max_diameter / 2.0) ** 2) - ((dh * steps) ** 2)) * pi * z_prev
-        return volume
-
-    volume1 = calculate_volume(radius1, coefficients1, dh1, 1.0)
-    if volume1 is None:
-        return None
-    volume2 = calculate_volume(radius2, coefficients2, dh2, -1.0)
-    if volume2 is None:
-        return None
-
-    return (
-        specific_gravity
-        * (pi * ((max_diameter / 2.0) ** 2) * thickness + volume1 + volume2)
-        / 1000.0
-    )
-
-
-def test_calculate_glass_weight_spherical_matches_reference() -> None:
-    """球面レンズの重量が参照計算と一致することを検証する。"""
+    coefficients1: AsphericCoefficients | None,
+    coefficients2: AsphericCoefficients | None,
+    expected_weight: float,
+    test_id: str,
+) -> None:
+    """VBAで計算した重量値と一致することを検証する（相対誤差1e-6以下）。"""
     weight = calculate_glass_weight(
-        radius1=50.0,
-        radius2=-50.0,
-        thickness=5.0,
-        specific_gravity=2.5,
-        diameter1=40.0,
-        diameter2=40.0,
-        max_diameter=40.0,
-    )
-    expected = _reference_glass_weight(
-        radius1=50.0,
-        radius2=-50.0,
-        thickness=5.0,
-        specific_gravity=2.5,
-        diameter1=40.0,
-        diameter2=40.0,
-        max_diameter=40.0,
-    )
-    assert expected is not None
-    assert weight == pytest.approx(expected, rel=1e-6)
-
-
-def test_calculate_glass_weight_aspheric_r1_matches_reference() -> None:
-    """R1面のみ非球面の重量が参照計算と一致することを検証する。"""
-    coefficients1 = AsphericCoefficients(conic=-0.5, a4=1e-6)
-    weight = calculate_glass_weight(
-        radius1=50.0,
-        radius2=-50.0,
-        thickness=5.0,
-        specific_gravity=2.5,
-        diameter1=40.0,
-        diameter2=40.0,
-        max_diameter=40.0,
-        coefficients1=coefficients1,
-    )
-    expected = _reference_glass_weight(
-        radius1=50.0,
-        radius2=-50.0,
-        thickness=5.0,
-        specific_gravity=2.5,
-        diameter1=40.0,
-        diameter2=40.0,
-        max_diameter=40.0,
-        coefficients1=coefficients1,
-    )
-    assert expected is not None
-    assert weight == pytest.approx(expected, rel=1e-6)
-
-
-def test_calculate_glass_weight_aspheric_both_matches_reference() -> None:
-    """両面非球面の重量が参照計算と一致することを検証する。"""
-    coefficients1 = AsphericCoefficients(conic=-0.5, a4=1e-6)
-    coefficients2 = AsphericCoefficients(conic=-0.8, a4=-2e-6)
-    weight = calculate_glass_weight(
-        radius1=50.0,
-        radius2=-60.0,
-        thickness=6.0,
-        specific_gravity=2.6,
-        diameter1=45.0,
-        diameter2=45.0,
-        max_diameter=45.0,
+        radius1=radius1,
+        radius2=radius2,
+        thickness=thickness,
+        specific_gravity=specific_gravity,
+        diameter1=diameter1,
+        diameter2=diameter2,
+        max_diameter=max_diameter,
         coefficients1=coefficients1,
         coefficients2=coefficients2,
     )
-    expected = _reference_glass_weight(
-        radius1=50.0,
-        radius2=-60.0,
-        thickness=6.0,
-        specific_gravity=2.6,
-        diameter1=45.0,
-        diameter2=45.0,
-        max_diameter=45.0,
-        coefficients1=coefficients1,
-        coefficients2=coefficients2,
-    )
-    assert expected is not None
-    assert weight == pytest.approx(expected, rel=1e-6)
+    assert weight is not None
+    assert weight == pytest.approx(expected_weight, rel=1e-6)
 
 
-def test_calculate_glass_weight_plane_and_sphere_matches_reference() -> None:
-    """平面を含むレンズの重量が参照計算と一致することを検証する。"""
-    weight = calculate_glass_weight(
-        radius1=None,
-        radius2=-80.0,
-        thickness=4.0,
-        specific_gravity=2.5,
-        diameter1=35.0,
-        diameter2=35.0,
-        max_diameter=35.0,
-    )
-    expected = _reference_glass_weight(
-        radius1=None,
-        radius2=-80.0,
-        thickness=4.0,
-        specific_gravity=2.5,
-        diameter1=35.0,
-        diameter2=35.0,
-        max_diameter=35.0,
-    )
-    assert expected is not None
-    assert weight == pytest.approx(expected, rel=1e-6)
-
-
-def test_calculate_glass_weight_flat_plate() -> None:
-    """平行平板の重量が円柱体積と一致することを検証する。"""
+def test_calculate_glass_weight_flat_plate_matches_cylinder_volume() -> None:
+    """平行平板の重量が円柱体積の計算式と一致することを検証する。"""
     weight = calculate_glass_weight(
         radius1=None,
         radius2=None,
@@ -476,12 +463,13 @@ def test_calculate_glass_weight_flat_plate() -> None:
         diameter2=40.0,
         max_diameter=40.0,
     )
+    # 円柱体積 = π * r^2 * h, 重量 = 比重 * 体積[cm^3]
     expected = 2.5 * math.pi * (20.0**2) * 5.0 / 1000.0
     assert weight == pytest.approx(expected, rel=1e-7)
 
 
 def test_calculate_glass_weight_scales_with_specific_gravity() -> None:
-    """比重に比例して重量が変化することを検証する。"""
+    """比重に比例して重量が変化することを検証する（物理的性質の確認）。"""
     base = calculate_glass_weight(
         radius1=None,
         radius2=None,
@@ -504,32 +492,8 @@ def test_calculate_glass_weight_scales_with_specific_gravity() -> None:
     assert doubled == pytest.approx(base * 2.0, rel=1e-7)
 
 
-def test_calculate_glass_weight_extreme_specific_gravity() -> None:
-    """比重の極小・極大値でも比例関係が維持されることを検証する。"""
-    small = calculate_glass_weight(
-        radius1=None,
-        radius2=None,
-        thickness=4.0,
-        specific_gravity=0.001,
-        diameter1=30.0,
-        diameter2=30.0,
-        max_diameter=30.0,
-    )
-    large = calculate_glass_weight(
-        radius1=None,
-        radius2=None,
-        thickness=4.0,
-        specific_gravity=20.0,
-        diameter1=30.0,
-        diameter2=30.0,
-        max_diameter=30.0,
-    )
-    assert small is not None
-    assert large == pytest.approx(small * 20000.0, rel=1e-7)
-
-
 def test_calculate_glass_weight_increases_with_max_diameter() -> None:
-    """最大外径が大きいほど重量が増加することを確認する。"""
+    """最大外径が大きいほど重量が増加することを確認する（物理的傾向の検証）。"""
     small = calculate_glass_weight(
         radius1=None,
         radius2=None,
@@ -554,7 +518,7 @@ def test_calculate_glass_weight_increases_with_max_diameter() -> None:
 
 
 def test_calculate_glass_weight_returns_none_when_sag_invalid_r1() -> None:
-    """R1面のサグ計算が失敗する場合はNoneを返すことを検証する。"""
+    """R1面のサグ計算が失敗する場合はNoneを返すことを検証する（異常系）。"""
     coefficients = AsphericCoefficients(conic=10.0)
     weight = calculate_glass_weight(
         radius1=5.0,
@@ -570,7 +534,7 @@ def test_calculate_glass_weight_returns_none_when_sag_invalid_r1() -> None:
 
 
 def test_calculate_glass_weight_returns_none_when_sag_invalid_r2() -> None:
-    """R2面のサグ計算が失敗する場合はNoneを返すことを検証する。"""
+    """R2面のサグ計算が失敗する場合はNoneを返すことを検証する（異常系）。"""
     coefficients = AsphericCoefficients(conic=10.0)
     weight = calculate_glass_weight(
         radius1=None,
@@ -586,7 +550,7 @@ def test_calculate_glass_weight_returns_none_when_sag_invalid_r2() -> None:
 
 
 def test_calculate_glass_weight_zero_thickness_flat_plate() -> None:
-    """厚み0の平行平板では重量が0になることを検証する。"""
+    """厚み0の平行平板では重量が0になることを検証する（境界値テスト）。"""
     weight = calculate_glass_weight(
         radius1=None,
         radius2=None,
