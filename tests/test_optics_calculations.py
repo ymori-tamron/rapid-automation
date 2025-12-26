@@ -1,6 +1,10 @@
 import pytest
 
-from src.optics.calculations import AsphericCoefficients, calculate_sag
+from src.optics.calculations import (
+    AsphericCoefficients,
+    calculate_focal_length,
+    calculate_sag,
+)
 
 # =============================================================================
 # テストデータ: CODE Vまたはレガシー実装から取得した期待値
@@ -128,6 +132,57 @@ SAG_TEST_CASES = [
     (200.0, 100.0, None, 6.350832689629156, "大口径レンズ (R=200mm, φ=100mm)"),
 ]
 
+FOCAL_LENGTH_TEST_CASES = [
+    (
+        100.0,
+        -100.0,
+        5.0,
+        1.5168,
+        97.58040934528817,
+        "両凸レンズ (R1=100, R2=-100, t=5.0, n=1.5168)",
+    ),
+    (
+        -100.0,
+        100.0,
+        5.0,
+        1.5168,
+        -95.93208299962866,
+        "両凹レンズ (R1=-100, R2=100, t=5.0, n=1.5168)",
+    ),
+    (
+        50.0,
+        None,
+        3.0,
+        1.5,
+        100.00000049,
+        "平凸レンズ (R1=50, R2=平面, t=3.0, n=1.5)",
+    ),
+    (
+        None,
+        None,
+        3.0,
+        1.5,
+        "Inf",
+        "両面平面 (R1=平面, R2=平面, t=3.0, n=1.5)",
+    ),
+    (
+        50.0,
+        -50.0,
+        0.0,
+        1.5,
+        50.0,
+        "エッジケース: 厚み0 (R1=50, R2=-50, t=0, n=1.5)",
+    ),
+    (
+        50.0,
+        -50.0,
+        5.0,
+        1.0,
+        "Inf",
+        "エッジケース: 屈折率1 (R1=50, R2=-50, t=5.0, n=1.0)",
+    ),
+]
+
 
 @pytest.mark.parametrize(
     "radius,diameter,coefficients,expected,description",
@@ -151,6 +206,26 @@ def test_calculate_sag_parametrized(
     """
     result = calculate_sag(radius, diameter, coefficients)
     assert result == pytest.approx(expected, rel=1e-7), f"Failed: {description}"
+
+
+@pytest.mark.parametrize(
+    "radius1,radius2,thickness,refractive_index,expected,description",
+    FOCAL_LENGTH_TEST_CASES,
+)
+def test_calculate_focal_length_parametrized(
+    radius1: float | None,
+    radius2: float | None,
+    thickness: float,
+    refractive_index: float,
+    expected: float | str,
+    description: str,
+) -> None:
+    """焦点距離の計算結果が期待値と一致することを検証する。"""
+    result = calculate_focal_length(radius1, radius2, thickness, refractive_index)
+    if expected == "Inf":
+        assert result == "Inf", f"Failed: {description}"
+    else:
+        assert result == pytest.approx(expected, rel=1e-7), f"Failed: {description}"
 
 
 # =============================================================================
