@@ -193,14 +193,17 @@ def calculate_glass_weight(
             z_values[i] = sign * sag
             if i > 0:
                 volume -= (
-                    ((dh * i_max) ** 2) * 2.0
-                    - (dh * (i - 1)) ** 2
-                    - (dh * i) ** 2
-                ) * pi * (z_values[i] - z_values[i - 1]) / 2.0
+                    (((dh * i_max) ** 2) * 2.0 - (dh * (i - 1)) ** 2 - (dh * i) ** 2)
+                    * pi
+                    * (z_values[i] - z_values[i - 1])
+                    / 2.0
+                )
 
-        volume -= (((float(max_diameter) / 2.0) ** 2) - ((dh * i_max) ** 2)) * pi * z_values[
-            i_max
-        ]
+        volume -= (
+            (((float(max_diameter) / 2.0) ** 2) - ((dh * i_max) ** 2))
+            * pi
+            * z_values[i_max]
+        )
         return volume
 
     volume1 = calculate_volume(radius1, coefficients1, dh1, 1.0)
@@ -213,6 +216,10 @@ def calculate_glass_weight(
 
     return (
         float(specific_gravity)
-        * (pi * ((float(max_diameter) / 2.0) ** 2) * float(thickness) + volume1 + volume2)
+        * (
+            pi * ((float(max_diameter) / 2.0) ** 2) * float(thickness)
+            + volume1
+            + volume2
+        )
         / 1000.0
     )

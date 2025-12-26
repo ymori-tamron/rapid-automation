@@ -16,7 +16,7 @@
 - [x] エッジケース（比重極小/極大、厚み0近傍）のテストを追加する
 
 ## 検証タスク
-- [ ] VBA版との数値一致（相対誤差 1e-6 以下）を確認する
-- [ ] `uv run ruff check src tests` を実行する
-- [ ] `uv run ruff format src tests` を実行する
-- [ ] `uv run pytest tests/test_optics_calculations.py -v` を実行する
+- [x] VBA版との数値一致（相対誤差 1e-6 以下）を確認する
+- [x] `uv run ruff check src tests` を実行する
+- [x] `uv run ruff format src tests` を実行する
+- [x] `uv run pytest tests/test_optics_calculations.py -v` を実行する
