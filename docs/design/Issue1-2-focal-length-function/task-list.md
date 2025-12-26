@@ -18,7 +18,7 @@
 - [x] エッジケース（`refractive_index=1`, `thickness=0`）のテストを追加する
 
 ## 検証タスク
-- [ ] VBA版との数値一致（相対誤差 1e-7 以下）を確認する
-- [ ] `uv run ruff check src tests` を実行する
-- [ ] `uv run ruff format src tests` を実行する
-- [ ] `uv run pytest tests/test_optics_calculations.py::test_focal_length* -v` を実行する
+- [x] CODEVとの数値一致（相対誤差 1e-7 以下）を確認する
+- [x] `uv run ruff check src tests` を実行する
+- [x] `uv run ruff format src tests` を実行する
+- [x] `uv run pytest tests/test_optics_calculations.py::test_focal_length* -v` を実行する
