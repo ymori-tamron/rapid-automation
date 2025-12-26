@@ -128,3 +128,91 @@ def calculate_focal_length(
     if pw == 0:
         return "Inf"
     return 1.0 / pw
+
+
+def calculate_glass_weight(
+    radius1: float | None,
+    radius2: float | None,
+    thickness: float,
+    specific_gravity: float,
+    diameter1: float,
+    diameter2: float,
+    max_diameter: float,
+    coefficients1: AsphericCoefficients | None = None,
+    coefficients2: AsphericCoefficients | None = None,
+) -> float | None:
+    """単レンズの重量を数値積分で算出する。
+
+    球面・非球面の両方に対応し、VBA版と同様に100ステップの台形積分で体積を求める。
+
+    Args:
+        radius1: R1面の曲率半径[mm]。Noneまたは0の場合は平面として扱う。
+        radius2: R2面の曲率半径[mm]。Noneまたは0の場合は平面として扱う。
+        thickness: 中心厚[mm]。
+        specific_gravity: 硝材の比重[g/cm^3]。
+        diameter1: R1面の有効径[mm]。
+        diameter2: R2面の有効径[mm]。
+        max_diameter: 最大外径[mm]。
+        coefficients1: R1面の非球面係数。
+        coefficients2: R2面の非球面係数。
+
+    Returns:
+        重量[g]。サグ計算に失敗した場合はNoneを返す。
+    """
+
+    _validate_number(thickness, "thickness")
+    _validate_number(specific_gravity, "specific_gravity")
+    _validate_number(diameter1, "diameter1")
+    _validate_number(diameter2, "diameter2")
+    _validate_number(max_diameter, "max_diameter")
+
+    if coefficients1 is None:
+        coefficients1 = AsphericCoefficients()
+    if coefficients2 is None:
+        coefficients2 = AsphericCoefficients()
+
+    i_max = 100
+    pi = math.pi
+
+    dh1 = (float(diameter1) / 2.0) / i_max
+    dh2 = (float(diameter2) / 2.0) / i_max
+
+    def calculate_volume(
+        radius: float | None,
+        coefficients: AsphericCoefficients,
+        dh: float,
+        sign: float,
+    ) -> float | None:
+        z_values = [0.0] * (i_max + 1)
+        volume = 0.0
+        for i in range(i_max + 1):
+            diameter = (dh * i) * 2.0
+            sag = calculate_sag(radius, diameter, coefficients)
+            if sag is None:
+                return None
+            z_values[i] = sign * sag
+            if i > 0:
+                volume -= (
+                    ((dh * i_max) ** 2) * 2.0
+                    - (dh * (i - 1)) ** 2
+                    - (dh * i) ** 2
+                ) * pi * (z_values[i] - z_values[i - 1]) / 2.0
+
+        volume -= (((float(max_diameter) / 2.0) ** 2) - ((dh * i_max) ** 2)) * pi * z_values[
+            i_max
+        ]
+        return volume
+
+    volume1 = calculate_volume(radius1, coefficients1, dh1, 1.0)
+    if volume1 is None:
+        return None
+
+    volume2 = calculate_volume(radius2, coefficients2, dh2, -1.0)
+    if volume2 is None:
+        return None
+
+    return (
+        float(specific_gravity)
+        * (pi * ((float(max_diameter) / 2.0) ** 2) * float(thickness) + volume1 + volume2)
+        / 1000.0
+    )
