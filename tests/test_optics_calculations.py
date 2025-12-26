@@ -9,11 +9,9 @@ from src.optics.calculations import AsphericCoefficients, calculate_sag
 #
 # 期待値の取得方法:
 # 1. CODE Vで各テストケースのパラメータを設定
-# 2. SAGコマンドで指定半径（diameter/2）のサグ量を計算
+# 2. SAGFコマンドで指定半径（diameter/2）のサグ量を計算
 # 3. 15桁精度で期待値を記録
-# 4. または、VBA版 basUDF.Sag で同じパラメータを実行して値を取得
 #
-# TODO: 以下の期待値をCODE VまたはVBAから取得した実測値に置き換えること
 # =============================================================================
 
 SAG_TEST_CASES = [
@@ -61,7 +59,7 @@ SAG_TEST_CASES = [
         50.0,
         20.0,
         AsphericCoefficients(a6=1e-9),
-        999.999,  # TODO: CODE VまたはVBAから期待値を取得
+        1.011205144336438,
         "非球面レンズ（A6係数=1e-9）",
     ),
 
@@ -71,7 +69,7 @@ SAG_TEST_CASES = [
         50.0,
         20.0,
         AsphericCoefficients(a8=1e-12),
-        999.999,  # TODO: CODE VまたはVBAから期待値を取得
+        1.010305144336438,
         "非球面レンズ（A8係数=1e-12）",
     ),
 
@@ -81,7 +79,7 @@ SAG_TEST_CASES = [
         50.0,
         20.0,
         AsphericCoefficients(a10=1e-15),
-        999.999,  # TODO: CODE VまたはVBAから期待値を取得
+        1.010215144336438,
         "非球面レンズ（A10係数=1e-15）",
     ),
 
@@ -91,7 +89,7 @@ SAG_TEST_CASES = [
         50.0,
         20.0,
         AsphericCoefficients(a12=1e-18),
-        999.999,  # TODO: CODE VまたはVBAから期待値を取得
+        1.010206144336438,
         "非球面レンズ（A12係数=1e-18）",
     ),
 
@@ -101,7 +99,7 @@ SAG_TEST_CASES = [
         50.0,
         20.0,
         AsphericCoefficients(a14=1e-21),
-        999.999,  # TODO: CODE VまたはVBAから期待値を取得
+        1.010205244336438,  # TODO: CODE VまたはVBAから期待値を取得
         "非球面レンズ（A14係数=1e-21）",
     ),
 
@@ -120,7 +118,7 @@ SAG_TEST_CASES = [
             a12=3.2e-20,
             a14=-6.1e-24,
         ),
-        999.999,  # TODO: CODE VまたはVBAから期待値を取得
+        1.025860201615352,
         "非球面レンズ（全係数使用: K=-0.8, A4～A14）",
     ),
 
