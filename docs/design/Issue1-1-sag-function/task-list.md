@@ -16,7 +16,7 @@
 - [x] 直径0のエッジケーステストを追加する
 
 ## 検証タスク
-- [ ] VBA版との数値一致（相対誤差 1e-7 以下）を確認する
-- [ ] `uv run ruff check src tests` を実行する
-- [ ] `uv run ruff format src tests` を実行する
-- [ ] `uv run pytest tests/test_optics_calculations.py -v` を実行する
+- [x] CODE V版との数値一致（相対誤差 1e-7 以下）を確認する
+- [x] `uv run ruff check src tests` を実行する
+- [x] `uv run ruff format src tests` を実行する
+- [x] `uv run pytest tests/test_optics_calculations.py -v` を実行する
